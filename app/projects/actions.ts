@@ -1,15 +1,6 @@
 'use server'
 import { prisma } from "@/lib/prisma";
-
-
-
-
-
 import { revalidatePath } from 'next/cache'
-
-// Initialize Prisma client for server-side use
-
-
 
 export type Project = {
   id: string
@@ -31,10 +22,22 @@ export async function getProjects(): Promise<Project[]> {
     const projects = await prisma.project.findMany({
       orderBy: { createdAt: 'desc' }
     })
-    return projects
+    return projects as Project[]
   } catch (error) {
     console.error('Error fetching projects:', error)
     throw new Error('Failed to fetch projects')
+  }
+}
+
+export async function getProject(id: string): Promise<Project | null> {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id }
+    })
+    return project as Project | null
+  } catch (error) {
+    console.error('Error fetching project:', error)
+    return null
   }
 }
 
