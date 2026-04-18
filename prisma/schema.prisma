@@ -1,0 +1,185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dataCollections DataCollection[]
+
+  @@map("users")
+}
+
+model Farmer {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String?
+  location    String
+  latitude    Float?
+  longitude   Float?
+  status      String   @default("active") // active, inactive
+  joinDate    DateTime @default(now())
+  lastActivity DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  crops       FarmerCrop[]
+  livestock   FarmerLivestock[]
+  dataCollections DataCollection[]
+
+  @@map("farmers")
+}
+
+model Crop {
+  id          String   @id @default(cuid())
+  name        String
+  variety     String?
+  category    String   // cereal, legume, root_crop, vegetable, fruit
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  farmerCrops FarmerCrop[]
+  dataCollections DataCollection[]
+
+  @@map("crops")
+}
+
+model Livestock {
+  id          String   @id @default(cuid())
+  type        String   // cattle, goat, sheep, poultry, pig
+  breed       String?
+  category    String   // ruminant, poultry, other
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  farmerLivestock FarmerLivestock[]
+  dataCollections DataCollection[]
+
+  @@map("livestock")
+}
+
+model FarmerCrop {
+  id        String   @id @default(cuid())
+  farmerId  String
+  cropId    String
+  area      Float    // in hectares
+  yield     Float?   // tons per hectare
+  status    String   @default("planted") // planted, growing, harvesting, harvested
+  plantDate DateTime?
+  harvestDate DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  farmer    Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  crop      Crop     @relation(fields: [cropId], references: [id], onDelete: Cascade)
+
+  @@unique([farmerId, cropId])
+  @@map("farmer_crops")
+}
+
+model FarmerLivestock {
+  id            String   @id @default(cuid())
+  farmerId      String
+  livestockId   String
+  count         Int
+  healthStatus  String   @default("healthy") // healthy, sick, recovering
+  productivity  Float?   // percentage
+  avgWeight     Float?   // in kg
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  farmer        Farmer     @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  livestock     Livestock  @relation(fields: [livestockId], references: [id], onDelete: Cascade)
+
+  @@unique([farmerId, livestockId])
+  @@map("farmer_livestock")
+}
+
+model DataCollection {
+  id          String   @id @default(cuid())
+  farmerId    String
+  userId      String
+  cropId      String?
+  livestockId String?
+  dataType    String   // crop_production, livestock_health, farmer_survey, etc.
+  quantity    Float?
+  unit        String?  // kg, liters, count, etc.
+  quality     String?  // good, average, poor
+  notes       String?
+  location    String?
+  latitude    Float?
+  longitude   Float?
+  collectedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  farmer      Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crop        Crop?    @relation(fields: [cropId], references: [id])
+  livestock   Livestock? @relation(fields: [livestockId], references: [id])
+
+  @@map("data_collections")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("planning") // planning, active, completed, cancelled
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float?
+  location    String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  indicators  Indicator[]
+
+  @@map("projects")
+}
+
+model Indicator {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  category    String   // farmer_adoption, crop_production, livestock_health, income, etc.
+  targetValue Float?
+  currentValue Float?  @default(0)
+  unit        String?
+  baseline    Float?
+  frequency   String   @default("monthly") // daily, weekly, monthly, quarterly
+  lastUpdated DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("indicators")
+}
