@@ -3,12 +3,13 @@
 import Sidebar from "../sidebar/Sidebar";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getProjects, deleteProject, type Project } from "./actions";
+import { getProjects, deleteProject, toggleProjectStatus, type Project } from "./actions";
 import { 
   FaProjectDiagram, 
   FaCalendarAlt, 
   FaDollarSign, 
   FaCheckCircle, 
+  FaRegCheckCircle,
   FaPlus, 
   FaEdit, 
   FaTrash, 
@@ -56,22 +57,48 @@ export default function Projects() {
     }
   };
 
+  const handleToggleStatus = async (projectId: string, currentStatus: string) => {
+    try {
+      const result = await toggleProjectStatus(projectId, currentStatus);
+      if (result.success) {
+        setMessage({ 
+          type: 'success', 
+          text: `Project marked as ${result.newStatus === 'completed' ? 'Complete' : 'Active'}!` 
+        });
+        fetchProjects();
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Error updating status.' });
+      }
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      setMessage({ type: 'error', text: 'Error toggling status.' });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "active": return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "completed": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "completed": 
+      case "successful": return "bg-blue-100 text-blue-800 border-blue-200";
       case "planning": return "bg-amber-100 text-amber-800 border-amber-200";
       case "cancelled": return "bg-rose-100 text-rose-800 border-rose-200";
       default: return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    if (status.toLowerCase() === 'completed') return 'Successful';
+    return status;
+  };
+
   // Metrics calculations
   const totalProjects = projects.length;
   const activeProjects = projects.filter(p => p.status.toLowerCase() === 'active').length;
   const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
-  const completionRate = totalProjects > 0 
-    ? Math.round((projects.filter(p => p.status.toLowerCase() === 'completed').length / totalProjects) * 100) 
+  const successfulProjectsCount = projects.filter(p => p.status.toLowerCase() === 'completed').length;
+  const completionRatePercentage = totalProjects > 0 
+    ? Math.round((successfulProjectsCount / totalProjects) * 100) 
     : 0;
 
   return (
@@ -118,7 +145,7 @@ export default function Projects() {
               { label: "Total Projects", value: totalProjects, icon: <FaProjectDiagram />, color: "text-emerald-600", bg: "bg-emerald-50" },
               { label: "Active", value: activeProjects, icon: <FaCalendarAlt />, color: "text-blue-600", bg: "bg-blue-50" },
               { label: "Total Budget", value: `$${totalBudget.toLocaleString()}`, icon: <FaDollarSign />, color: "text-amber-600", bg: "bg-amber-50" },
-              { label: "Success Rate", value: `${completionRate}%`, icon: <FaCheckCircle />, color: "text-rose-600", bg: "bg-rose-50" },
+              { label: "Successful Projects", value: successfulProjectsCount, icon: <FaCheckCircle />, color: "text-blue-600", bg: "bg-blue-50" },
             ].map((stat, i) => (
               <div key={i} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
                 <div className="flex justify-between items-start mb-4">
@@ -193,7 +220,7 @@ export default function Projects() {
                         <td className="px-8 py-6">
                           <div className="flex flex-col gap-2">
                             <span className={`inline-flex items-center px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border ${getStatusColor(project.status)}`}>
-                              {project.status}
+                              {getStatusLabel(project.status)}
                             </span>
                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
                               {project.startDate ? new Date(project.startDate).getFullYear() : 'TBD'} - {project.endDate ? new Date(project.endDate).getFullYear() : 'TBD'}
@@ -208,6 +235,17 @@ export default function Projects() {
                         </td>
                         <td className="px-8 py-6">
                           <div className="flex justify-end gap-2 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                            <button
+                              onClick={() => handleToggleStatus(project.id, project.status)}
+                              className={`p-3 rounded-xl shadow-sm border border-slate-100 transition-all ${
+                                project.status.toLowerCase() === 'completed' 
+                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700' 
+                                  : 'bg-white text-slate-400 hover:text-emerald-600 hover:border-emerald-200'
+                              }`}
+                              title={project.status.toLowerCase() === 'completed' ? "Re-open Project" : "Mark as Complete"}
+                            >
+                              {project.status.toLowerCase() === 'completed' ? <FaCheckCircle /> : <FaRegCheckCircle />}
+                            </button>
                             <button
                               onClick={() => router.push(`/projects/${project.id}`)}
                               className="p-3 bg-white text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl shadow-sm border border-slate-100 transition-all"

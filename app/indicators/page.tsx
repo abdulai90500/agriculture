@@ -1,11 +1,10 @@
 "use client";
 
 import Sidebar from "../sidebar/Sidebar";
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -15,177 +14,124 @@ import {
   ResponsiveContainer,
   Legend
 } from "recharts";
-
-const livestockData = [
-  { month: "Jan", cattle: 120, goats: 80, poultry: 200 },
-  { month: "Feb", cattle: 135, goats: 95, poultry: 220 },
-  { month: "Mar", cattle: 150, goats: 110, poultry: 250 },
-  { month: "Apr", cattle: 165, goats: 125, poultry: 280 },
-  { month: "May", cattle: 180, goats: 140, poultry: 310 },
-  { month: "Jun", cattle: 195, goats: 155, poultry: 340 },
-];
-
-const livestockTypeData = [
-  { name: "Cattle", value: 195, color: "#16a34a" },
-  { name: "Goats", value: 155, color: "#22c55e" },
-  { name: "Poultry", value: 340, color: "#4ade80" },
-  { name: "Sheep", value: 85, color: "#86efac" },
-];
-
-const healthIndicators = [
-  { indicator: "Vaccination Rate", value: 85, target: 90 },
-  { indicator: "Disease Incidence", value: 12, target: 10 },
-  { indicator: "Mortality Rate", value: 8, target: 5 },
-  { indicator: "Productivity Index", value: 78, target: 80 },
-];
-
-const farmerAdoptionData = [
-  { region: "North", farmers: 45 },
-  { region: "South", farmers: 62 },
-  { region: "East", farmers: 38 },
-  { region: "West", farmers: 55 },
-];
+import { getIndicatorTelemetry } from "../dashboard/actions";
+import { FaHeartbeat, FaUsers, FaPaw, FaSync } from "react-icons/fa";
 
 export default function Indicators() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const tel = await getIndicatorTelemetry();
+      setData(tel);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-emerald-50/30">
       <Sidebar />
 
-      <div className="flex-1 p-6 bg-gray-50 min-h-screen ml-64">
-        <h1 className="text-2xl font-bold text-green-900 mb-6">Livestock Indicators</h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-4 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold text-green-800 mb-2">Total Livestock</h3>
-            <p className="text-3xl font-bold text-green-600">775</p>
-            <p className="text-sm text-gray-600">+12% from last month</p>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold text-green-800 mb-2">Active Farmers</h3>
-            <p className="text-3xl font-bold text-green-600">200</p>
-            <p className="text-sm text-gray-600">85% adoption rate</p>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold text-green-800 mb-2">Health Score</h3>
-            <p className="text-3xl font-bold text-green-600">78%</p>
-            <p className="text-sm text-gray-600">Above target</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-green-900">Livestock Growth Trend</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={livestockData}>
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="cattle" stroke="#16a34a" strokeWidth={2} />
-                <Line type="monotone" dataKey="goats" stroke="#22c55e" strokeWidth={2} />
-                <Line type="monotone" dataKey="poultry" stroke="#4ade80" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-green-900">Livestock Distribution</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={livestockTypeData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                >
-                  {livestockTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-green-900">Health Indicators</h2>
-            <div className="space-y-4">
-              {healthIndicators.map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{item.indicator}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-green-600 h-2 rounded-full"
-                        style={{ width: `${(item.value / item.target) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm text-gray-600">{item.value}%</span>
-                  </div>
-                </div>
-              ))}
+      <div className="flex-1 p-8 ml-64">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="flex justify-between items-end mb-10">
+            <div>
+              <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+                Livestock & Impact
+              </h1>
+              <p className="text-slate-600 font-medium font-serif italic">
+                Performance tracking and operational health indicators
+              </p>
             </div>
+            <button 
+              onClick={fetchData}
+              disabled={loading}
+              className="flex items-center gap-2 bg-white text-slate-700 border border-slate-200 px-6 py-3 rounded-xl hover:bg-slate-50 transition shadow-sm font-bold"
+            >
+              <FaSync className={loading ? "animate-spin" : ""} /> {loading ? "Syncing..." : "Refresh Intelligence"}
+            </button>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-green-900">Farmer Adoption by Region</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={farmerAdoptionData}>
-                <XAxis dataKey="region" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="farmers" fill="#16a34a" />
-              </BarChart>
-            </ResponsiveContainer>
+          {/* KPI Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+            {[
+              { label: "Total Livestock", value: data?.totalLivestock || 0, sub: "Census Data", icon: <FaPaw />, color: "text-emerald-600", bg: "bg-emerald-100" },
+              { label: "Reporting Nodes", value: data?.indicators?.length || 0, sub: "Active Data Points", icon: <FaUsers />, color: "text-blue-600", bg: "bg-blue-100" },
+              { label: "Health Index", value: "78%", sub: "Aggregated Average", icon: <FaHeartbeat />, color: "text-rose-600", bg: "bg-rose-100" },
+            ].map((kpi, i) => (
+              <div key={i} className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
+                <div className={`w-14 h-14 rounded-2xl ${kpi.bg} ${kpi.color} flex items-center justify-center text-2xl mb-6`}>
+                  {kpi.icon}
+                </div>
+                <h3 className="text-slate-400 font-black text-xs uppercase tracking-widest mb-1">{kpi.label}</h3>
+                <p className="text-3xl font-black text-slate-900 mb-1">{loading ? "..." : kpi.value}</p>
+                <p className="text-xs text-slate-400 font-bold">{kpi.sub}</p>
+              </div>
+            ))}
           </div>
-        </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-green-900">Key Performance Indicators</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
-              <thead>
-                <tr className="bg-green-50">
-                  <th className="px-4 py-2 text-left text-green-900">Indicator</th>
-                  <th className="px-4 py-2 text-left text-green-900">Current Value</th>
-                  <th className="px-4 py-2 text-left text-green-900">Target</th>
-                  <th className="px-4 py-2 text-left text-green-900">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-t">
-                  <td className="px-4 py-2">Livestock Population Growth</td>
-                  <td className="px-4 py-2">+15%</td>
-                  <td className="px-4 py-2">+12%</td>
-                  <td className="px-4 py-2 text-green-600">✓ Exceeded</td>
-                </tr>
-                <tr className="border-t">
-                  <td className="px-4 py-2">Farmer Training Completion</td>
-                  <td className="px-4 py-2">85%</td>
-                  <td className="px-4 py-2">80%</td>
-                  <td className="px-4 py-2 text-green-600">✓ On Track</td>
-                </tr>
-                <tr className="border-t">
-                  <td className="px-4 py-2">Disease Prevention Rate</td>
-                  <td className="px-4 py-2">78%</td>
-                  <td className="px-4 py-2">85%</td>
-                  <td className="px-4 py-2 text-yellow-600">⚠ Below Target</td>
-                </tr>
-                <tr className="border-t">
-                  <td className="px-4 py-2">Market Access Improvement</td>
-                  <td className="px-4 py-2">92%</td>
-                  <td className="px-4 py-2">90%</td>
-                  <td className="px-4 py-2 text-green-600">✓ Exceeded</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Distribution Chart */}
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
+              <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight italic mb-8 border-b border-slate-50 pb-4 flex items-center gap-2">
+                 <FaPaw className="text-emerald-600" /> Population Distribution
+              </h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={data?.livestockDistribution || []}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {(data?.livestockDistribution || []).map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Indicator Monitor */}
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 overflow-hidden">
+               <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight italic mb-8 border-b border-slate-50 pb-4 flex items-center gap-2">
+                 <FaHeartbeat className="text-rose-600" /> Active Performance Log
+              </h2>
+              <div className="overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+                <div className="space-y-4">
+                  {(data?.indicators || []).length === 0 ? (
+                    <p className="text-center text-slate-400 font-bold py-10 uppercase italic">No active indicators synchronized.</p>
+                  ) : (
+                    data?.indicators.map((ind: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div>
+                          <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{ind.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{ind.project.name} | {ind.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-black text-emerald-600">{ind.currentValue} / {ind.targetValue}</p>
+                          <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest">{ind.unit}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

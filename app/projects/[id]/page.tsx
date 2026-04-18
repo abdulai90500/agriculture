@@ -3,7 +3,7 @@
 import Sidebar from "../../sidebar/Sidebar";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { getProject, type Project } from "../actions";
+import { getProject, toggleProjectStatus, type Project } from "../actions";
 import { 
   FaArrowLeft, 
   FaEdit, 
@@ -13,8 +13,10 @@ import {
   FaDollarSign, 
   FaInfoCircle,
   FaCheckCircle,
+  FaRegCheckCircle,
   FaHistory,
-  FaChartLine
+  FaChartLine,
+  FaTimes
 } from "react-icons/fa";
 
 export default function ViewProject({ params }: { params: Promise<{ id: string }> }) {
@@ -23,19 +25,45 @@ export default function ViewProject({ params }: { params: Promise<{ id: string }
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const loadProject = async () => {
+    const data = await getProject(id);
+    if (data) {
+      setProject(data);
+    } else {
+      setError("Project not found");
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    async function loadProject() {
-      const data = await getProject(id);
-      if (data) {
-        setProject(data);
-      } else {
-        setError("Project not found");
-      }
-      setLoading(false);
-    }
     loadProject();
   }, [id]);
+
+  const handleToggleStatus = async () => {
+    if (!project) return;
+    setToggling(true);
+    try {
+      const result = await toggleProjectStatus(id, project.status);
+      if (result.success) {
+        setMessage({ 
+          type: 'success', 
+          text: `Project marked as ${result.newStatus === 'completed' ? 'Complete' : 'Active'}!` 
+        });
+        loadProject();
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Error updating status.' });
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: 'Error toggling status.' });
+    } finally {
+      setToggling(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -65,11 +93,17 @@ export default function ViewProject({ params }: { params: Promise<{ id: string }
   const getStatusStyle = (status: string) => {
     switch (status.toLowerCase()) {
       case "active": return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "completed": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "completed": 
+      case "successful": return "bg-blue-100 text-blue-800 border-blue-200";
       case "planning": return "bg-amber-100 text-amber-800 border-amber-200";
       case "cancelled": return "bg-rose-100 text-rose-800 border-rose-200";
       default: return "bg-slate-100 text-slate-800 border-slate-200";
     }
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status.toLowerCase() === 'completed') return 'Successful';
+    return status;
   };
 
   return (
@@ -92,7 +126,7 @@ export default function ViewProject({ params }: { params: Promise<{ id: string }
                   {project.name}
                 </h1>
                 <span className={`px-4 py-1.5 rounded-full border text-xs font-black uppercase tracking-[0.2em] ${getStatusStyle(project.status)}`}>
-                  {project.status}
+                  {getStatusLabel(project.status)}
                 </span>
               </div>
               <p className="text-slate-500 font-bold flex items-center gap-2">
@@ -100,10 +134,22 @@ export default function ViewProject({ params }: { params: Promise<{ id: string }
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleToggleStatus}
+                disabled={toggling}
+                className={`flex items-center gap-2 px-8 py-4 rounded-2xl transition-all shadow-xl font-black uppercase tracking-widest text-sm ${
+                  project.status.toLowerCase() === 'completed'
+                    ? "bg-slate-100 text-slate-600 hover:bg-emerald-600 hover:text-white shadow-emerald-200"
+                    : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"
+                }`}
+              >
+                {project.status.toLowerCase() === 'completed' ? <FaRegCheckCircle /> : <FaCheckCircle />}
+                {toggling ? "Processing..." : project.status.toLowerCase() === 'completed' ? "Set as Active" : "Set as Complete"}
+              </button>
               <button
                 onClick={() => router.push(`/projects/${id}/edit`)}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl transition-all shadow-xl shadow-emerald-200 font-black uppercase tracking-widest text-sm"
+                className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 px-8 py-4 rounded-2xl transition-all font-black uppercase tracking-widest text-sm"
               >
                 <FaEdit /> Calibrate
               </button>
@@ -115,6 +161,20 @@ export default function ViewProject({ params }: { params: Promise<{ id: string }
               </button>
             </div>
           </div>
+
+          {/* Toast Notification */}
+          {message && (
+            <div className={`fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-right-8 duration-300 p-4 rounded-2xl shadow-2xl border ${
+              message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-full ${message.type === 'success' ? 'bg-emerald-200' : 'bg-rose-200'}`}>
+                  {message.type === 'success' ? <FaCheckCircle /> : <FaTimes />}
+                </div>
+                <p className="font-bold">{message.text}</p>
+              </div>
+            </div>
+          )}
 
           {/* Key Insight Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -188,10 +248,15 @@ export default function ViewProject({ params }: { params: Promise<{ id: string }
                 <div className="mt-12 bg-emerald-800/30 p-6 rounded-3xl border border-emerald-700/50">
                    <div className="flex justify-between items-center mb-2">
                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Operational Health</span>
-                     <span className="text-xs font-bold text-emerald-200">92%</span>
+                     <span className="text-xs font-bold text-emerald-200">
+                       {project.status.toLowerCase() === 'completed' ? '100%' : '65%'}
+                     </span>
                    </div>
                    <div className="w-full h-1.5 bg-emerald-950 rounded-full overflow-hidden">
-                      <div className="w-[92%] h-full bg-emerald-400"></div>
+                      <div 
+                        className="h-full bg-emerald-400 transition-all duration-1000" 
+                        style={{ width: project.status.toLowerCase() === 'completed' ? '100%' : '65%' }}
+                      ></div>
                    </div>
                 </div>
               </div>

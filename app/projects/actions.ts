@@ -114,7 +114,7 @@ export async function deleteProject(id: string) {
       throw new Error('Project ID is required')
     }
 
-    await prisma.project.delete({
+    const result = await prisma.project.delete({
       where: { id }
     })
 
@@ -123,5 +123,22 @@ export async function deleteProject(id: string) {
   } catch (error) {
     console.error('Error deleting project:', error)
     return { success: false, error: 'Failed to delete project' }
+  }
+}
+
+export async function toggleProjectStatus(id: string, currentStatus: string) {
+  try {
+    const newStatus = currentStatus.toLowerCase() === 'completed' ? 'active' : 'completed';
+    
+    await prisma.project.update({
+      where: { id },
+      data: { status: newStatus }
+    });
+
+    revalidatePath('/projects');
+    return { success: true, newStatus };
+  } catch (error) {
+    console.error('Error toggling project status:', error);
+    return { success: false, error: 'Failed to update status' };
   }
 }

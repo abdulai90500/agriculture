@@ -34,7 +34,6 @@ export default function Sidebar() {
     { name: "Indicators", path: "/indicators", icon: <FaChartLine /> },
     { name: "Users", path: "/users", icon: <FaUsers /> },
     { name: "Profile Settings", path: "/profile", icon: <FaUserCircle /> },
-    { name: "Settings", path: "/settings", icon: <FaCog /> },
   ];
 
   return (
